@@ -26,15 +26,13 @@ namespace Microsoft.PowerShell.Commands
         private string upperset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         private string numberset = "0123456789";
         private string symbolset = " !\"#$%&'()*+,-./:;<=>?@";
-        private List<char> allcharacters = new List<char>();
-        private List<char> removecharacters = new List<char>();
+        private List<char> all = new List<char>();
         private List<char> excludes = new List<char>();
         private List<char> uppers = new List<char>();
         private List<char> lowers = new List<char>();
         private List<char> numbers = new List<char>();
         private List<char> symbols = new List<char>();
         private List<char> password = new List<char>();
-        private int minlength;
 
         /// <summary>
         /// Allows the user to override the second
@@ -107,9 +105,11 @@ namespace Microsoft.PowerShell.Commands
         /// </summary>
         protected override void ProcessRecord()
         {
-            // basic sanity check
-            minlength = upper + lower + symbol + number;
-            if(minlength < length){
+
+            var minlength = upper + lower + number + symbol;
+            if(length < minlength){
+                ErrorRecord er = new ErrorRecord(e, "FormatException", ErrorCategory.InvalidType, length);
+                ThrowTerminatingError(er);
             }
 
             // generate character arrays
@@ -120,8 +120,7 @@ namespace Microsoft.PowerShell.Commands
 
             // exclude characters
             if(!String.IsNullOrEmpty(exclude)){
-                removecharacters.AddRange(exclude.ToCharArray());
-                foreach(var c in removecharacters){
+                foreach(var c in exclude.ToCharArray()){
                     uppers.Remove(c);
                     lowers.Remove(c);
                     numbers.Remove(c);
@@ -129,48 +128,23 @@ namespace Microsoft.PowerShell.Commands
                 }
             }
 
+            // get remaining cahracters, all classes
+            all.AddRange(uppers);
+            all.AddRange(lowers);
+            all.AddRange(numbers);
+            all.AddRange(symbols);
+
+            // get random cahracter from each class
             password.AddRange(GetRandomCharacters(uppers, upper));
-
-            var rnd = new Random();
-            if(upper > 0){
-                for(int u = 0; u < upper; u++){
-                    password.Add(uppers[rnd.Next(uppers.Count)]);
-                }
-                allcharacters.AddRange(uppers);
-            } else {
-            }
-
-            if(number > 0){
-                for(int l = 0; l < number; l++){
-                    password.Add(lowers[rnd.Next(lowers.Count)]);
-                }
-                allcharacters.AddRange(lowers);
-            } else {
-            }
-
-            if(number > 0){
-                for(int n = 0; n < number; n++){
-                    password.Add(numbers[rnd.Next(numbers.Count)]);
-                }
-                allcharacters.AddRange(numbers);
-            } else {
-            }
-
-            if(symbol > 0){
-                for(int s = 0; s < symbol; s++){
-                    password.Add(symbols[rnd.Next(symbols.Count)]);
-                }
-                allcharacters.AddRange(symbols);
-            } else {
-            }
+            password.AddRange(GetRandomCharacters(lowers, lower));
+            password.AddRange(GetRandomCharacters(numbers, number));
+            password.AddRange(GetRandomCharacters(symbols, symbol));
 
             var remainder = length - password.Count;
             if(remainder != 0){
-                allcharacters.Shuffle();
-                for(int r = 0; r < remainder; r++){
-                    password.Add(allcharacters[rnd.Next(allcharacters.Count)]);
-                }
+                password.AddRange(GetRandomCharacters(all, remainder));
             }
+
             password.Shuffle();
             var sb = new System.Text.StringBuilder();
             foreach(var c in password){ sb.Append(c); }
