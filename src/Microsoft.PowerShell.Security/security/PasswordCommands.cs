@@ -105,13 +105,6 @@ namespace Microsoft.PowerShell.Commands
         /// </summary>
         protected override void ProcessRecord()
         {
-
-            var minlength = upper + lower + number + symbol;
-            if(length < minlength){
-                ErrorRecord er = new ErrorRecord(e, "FormatException", ErrorCategory.InvalidType, length);
-                ThrowTerminatingError(er);
-            }
-
             // generate character arrays
             uppers.AddRange(upperset.ToCharArray());
             lowers.AddRange(lowerset.ToCharArray());
